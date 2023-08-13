@@ -1,4 +1,4 @@
-
+##### libraries ####
 
 ```{r}
 library(Seurat)
@@ -16,47 +16,33 @@ library(MetBrewer)
 
 
 ```{r}
-setwd("~/polybox/Jain_Gut_et_al_2023/Matrix_perturbation_scRNAseq_Day13/")
-seurat_DS1 <- readRDS("HB4_Agar_D13_raw.rds")
-seurat_DS2 <- readRDS("HB4_Mat_D13_raw.rds")
-seurat_DS3 <- readRDS("HB4_NoMat_D13_raw.rds")
-
-
-```
-
-
-```{r}
-seurat_DS1$dataset <- "HB4 Agar Day 13"
-seurat_DS2$dataset <- "HB4 Mat Day 13"
-seurat_DS3$dataset <- "HB4 NoMat Day 13"
-
+setwd("/Users/jainak/polybox/Jain_Gut_et_al_2023/2.Matrix_perturbation_scRNAseq_Day13")
+seurat_Day13_matrix <- readRDS("seurat_Day13_matrix.rds")
 ```
 
                                     ####QC#####
 
 ```{r}
-seurat <- merge(seurat_DS1,y = list(seurat_DS2, seurat_DS3), add.cell.ids = c("HB4 Agar Day 13" ,"HB4 Mat Day 13","HB4 NoMat Day 13"))
 
-
-seurat[["percent.mt"]] <- PercentageFeatureSet(seurat, pattern = "^MT-")
+seurat_Day13_matrix[["percent.mt"]] <- PercentageFeatureSet(seurat_Day13_matrix, pattern = "^MT-")
 
 
 # Visualize QC metrics as a violin plot
-QCmetrics <- VlnPlot (seurat, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, pt.size = 0)
+QCmetrics <- VlnPlot (seurat_Day13_matrix, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, pt.size = 0)
 QCmetrics
 
-VlnPlot (seurat, features = "percent.mt", y.max=11)
-VlnPlot (seurat, features = "nCount_RNA", y.max=40000)
-VlnPlot (seurat, features = "nFeature_RNA", y.max=8000)
+VlnPlot (seurat_Day13_matrix, features = "percent.mt", y.max=11)
+VlnPlot (seurat_Day13_matrix, features = "nCount_RNA", y.max=40000)
+VlnPlot (seurat_Day13_matrix, features = "nFeature_RNA", y.max=8000)
 
 
-seurat <- subset (seurat, subset =  nFeature_RNA > 500 &  nFeature_RNA < 8000  & percent.mt < 10)
+seurat_Day13_matrix <- subset (seurat_Day13_matrix, subset =  nFeature_RNA > 500 &  nFeature_RNA < 8000  & percent.mt < 10)
 seurat
-head (seurat@meta.data, 5)
+head (seurat_Day13_matrix@meta.data, 5)
 
-seurat <- NormalizeData (seurat, normalization.method = "LogNormalize", scale.factor = 10000)
+seurat_Day13_matrix <- NormalizeData (seurat_Day13_matrix, normalization.method = "LogNormalize", scale.factor = 10000)
 
-seurat <- FindVariableFeatures(seurat, nfeatures = 3000) %>%
+seurat_Day13_matrix <- FindVariableFeatures(seurat_Day13_matrix, nfeatures = 3000) %>%
 ScaleData() %>%
 RunPCA(npcs = 50) 
 
@@ -84,7 +70,7 @@ Seurat_obj@assays$RNA@meta.features), value = T, ignore.case = T),
   return(Seurat_obj)
 }
 
-seurat_MT_Rib_His <- Filter_Mito_Ribo(seurat)
+seurat_MT_Rib_His <- Filter_Mito_Ribo(seurat_Day13_matrix)
 
 ```
                                  
@@ -107,8 +93,6 @@ plot2 <- UMAPPlot(seurat_MT_Rib_His_Merge, label = T)
 
 plot <- plot1+plot2
 
-ggsave("UMAP_seurat_MT_Rib_His_Merge.jpeg", plot, width=30,height=15, units = c("cm"),dpi = 300)
-
 
             ################### Plotting UMAP with cell cycle stage annotation
 
@@ -121,12 +105,10 @@ head(seurat_MT_Rib_His_Merge[[]])
 Idents (seurat_MT_Rib_His_Merge) <- "Phase"
 
 # Plot UMAP to file
-png ("UMAP_seurat_MT_Rib_His_Merge_phase.png",width=20,height=15,units="cm",res=500)
 DimPlot (seurat_MT_Rib_His_Merge, reduction = "umap", label = TRUE, pt.size = 1, label.size = 0) 
 
 dev.off ()
 ```
-
 
                                    ####### CSS #####
                                    
@@ -175,26 +157,10 @@ DimPlot (seurat_CSS_CCR, reduction = "umap", label = TRUE, pt.size = 1, label.si
 dev.off ()
 ```
 
-```{r}
-##########################     Feature plots        ##########################     
-
-
-Feature_plot1 <-  FeaturePlot(seurat_CSS, c("POU5F1","WLS","NES","VIM","RAX","SOX2","FOXG1","FGF8","CDH2","LDHA","WNT8B","HES5","SIX3","SIX6","SFRP2","PRTG","HESX1","FOXH1","FOXO3","PAX6","FEZF1","FEZF2","SOX10","FOXD3","PRPH","IRX3", "GPM6A","STMN2"), order=TRUE, cols = c("lightgrey", "Purple4"), ncol = 6, pt.size = 0.5)   & NoAxes() & NoLegend()
-Feature_plot1
-
-ggsave("Feature_plot_seurat_CSS_1.jpeg", Feature_plot1, width=25,height=40)
-
-```
-
-     
-
           #################################### Dotplot ##############################################
 
 ```{r}
 Idents(seurat_CSS) <- "seurat_clusters"
-Idents(seurat_CSS) <- "anno_class1"
-Idents(seurat_CSS) <- "dataset"
-
 ##### DOTPlot ####
 dotplot <- function(exprmat,
                     genes,
@@ -332,13 +298,7 @@ library(dittoSeq)
 
 Idents(seurat_CSS) <- "dataset"
 
-cl_markers_agar.mat <- FindMarkers(seurat_CSS, ident.1 =c("HB4 Agar Day 13"), ident.2 = c("HB4 Mat Day 13"), only.pos = F)
-
 cl_markers_mat.nomat <- FindMarkers(seurat_CSS, ident.1 =c("HB4 Mat Day 13"), ident.2 = c("HB4 NoMat Day 13"), only.pos = F)
-
-cl_markers_agar.nomat <- FindMarkers(seurat_CSS, ident.1 =c("HB4 Agar Day 13"), ident.2 = c("HB4 NoMat Day 13"), only.pos = F)
-
-mapal2 <- met.brewer("Renoir", n = 8)
 
 volcano_1 <- EnhancedVolcano(cl_markers_mat.nomat,
                              lab = rownames(cl_markers_mat.nomat),
@@ -365,18 +325,8 @@ ggsave( "volcano_MatvsNoMat_1.pdf",volcano_1,width=25, height=20, units="cm", dp
 write.csv(cl_markers_mat.nomat, "DE_genes_matVsnomat.csv")
 
 ```
-  
 
-
-
-```{r}
-
-saveRDS(seurat_CSS, "seurat_CSS.rds")
-
-seurat_CSS <- readRDS( "seurat_CSS.rds")
-
-```
-
+                ##### create files for DAVID GO analysis ########
 
 ```{r}
 
@@ -426,64 +376,6 @@ meta_genes <- getBM(attributes = c("ensembl_gene_id",
 write.table(meta_genes$ensembl_gene_id[meta_genes$hgnc_symbol %in% detected_genes], file="background.tsv", quote=F, sep="\t", row.names=F, col.names=F)
 
 result_data <- read.csv("up_DAVID_t2t_5957FDDF677B1674660059570.txt", header = TRUE, sep = "\t", col.names = NULL, )
-
-
-####################### DE intersect with pseudotime dependent genes #########################
-
-library(tidyr)
-
-
-ecm_negative <-read.csv("Supplementary Table_3.csv")
-ecm_negative <- subset(ecm_negative, is_ECM == "TRUE")
-
-
-ecm_positive <-read.csv("Supplementary Table_3.csv")
-ecm_positive <- subset(ecm_positive, is_ECM == "TRUE")
-
-
-
-DE_D13_allcells_up <- read.csv("DE_up.csv")
-DE_D13_allcells_down <- read.csv("DE_down.csv")
-
-
-intersect_DE_D13_allcells_up_ptd_pos = intersect(ecm_positive$gene,DE_D13_allcells_up$X)
-intersect_DE_D13_allcells_up_ptd_pos <- intersect_DE_D13_allcells_up_ptd_pos %>%
-          data.frame()%>%  
-          mutate(ptd_up = "TRUE") %>%
-          mutate(allcells_up_inMat = "TRUE")
-
-colnames(intersect_DE_D13_allcells_up_ptd_pos)[1] = "gene"
-
-
-intersect_DE_D13_allcells_up_ptd_neg = intersect(ecm_negative$gene,DE_D13_allcells_up$X)
-intersect_DE_D13_allcells_up_ptd_neg <- intersect_DE_D13_allcells_up_ptd_neg %>%
-          data.frame()%>%  
-          mutate(ptd_up = "FALSE") %>%
-          mutate(allcells_up_inMat = "TRUE") #%>% 
-          #filter(intersect_DE_D13_allcells_up_ptd_neg$. != "HESX1")
-colnames(intersect_DE_D13_allcells_up_ptd_neg)[1] = "gene"
-
-intersect_DE_D13_allcells_down_ptd_pos = intersect(ecm_positive$gene,DE_D13_allcells_down$X)
-intersect_DE_D13_allcells_down_ptd_pos <- intersect_DE_D13_allcells_down_ptd_pos %>%
-          data.frame()%>%  
-          mutate(ptd_up = "TRUE") %>%
-          mutate(allcells_up_inMat = "FALSE")
-colnames(intersect_DE_D13_allcells_down_ptd_pos)[1] = "gene"
-
-intersect_DE_D13_allcells_down_ptd_neg = intersect(ecm_negative$gene,DE_D13_allcells_down$X)
-intersect_DE_D13_allcells_down_ptd_neg <- intersect_DE_D13_allcells_down_ptd_neg %>%
-          data.frame()%>%  
-          mutate(ptd_up = "FALSE") %>%
-          mutate(allcells_up_inMat = "FALSE")
-colnames(intersect_DE_D13_allcells_down_ptd_neg)[1] = "gene"
-
-
-combined_allcells_DE_pseudotime <- rbind(intersect_DE_D13_allcells_up_ptd_pos,intersect_DE_D13_allcells_up_ptd_neg,intersect_DE_D13_allcells_down_ptd_pos,intersect_DE_D13_allcells_down_ptd_neg )
-
-
-
-write.csv(combined_allcells_DE_pseudotime, "intersect_genelist_pseudotime_with_D13allcellsMatVsNoMat_ECMsubset.csv")
-
 ```       
         
 ```{r}
@@ -493,6 +385,3 @@ saveRDS(seurat_CSS, "seurat_CSS.rds")
 seurat_CSS <- readRDS( "seurat_CSS.rds")
 
 ```
-          
-                    
-
